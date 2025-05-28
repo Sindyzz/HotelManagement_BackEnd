@@ -55,29 +55,6 @@ namespace HotelManagement.Controllers
             });
         }
 
-        [HttpPost]
-        public async Task<IActionResult> CreateCustomer([FromBody] AddCustomer customer)
-        {
-            var emailExists = await _customerRepository.IsEmailExistsAsync(customer.Email);
-            if (emailExists.Success && emailExists.Data)
-                return StatusCode(400, new { success = false, message = "Email đã tồn tại", data = (string)null });
-
-            var phoneExists = await _customerRepository.IsPhoneExistsAsync(customer.DienThoai);
-            if (phoneExists.Success && phoneExists.Data)
-                return StatusCode(400, new { success = false, message = "Số điện thoại đã tồn tại", data = (string)null });
-
-            var response = await _customerRepository.CreateAsync(customer);
-            if (!response.Success)
-                return StatusCode(400, new { success = false, message = response.Message, data = (string)null });
-
-            return StatusCode(201, new
-            {
-                success = response.Success,
-                message = response.Message,
-                data = response.Data
-            });
-        }
-
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCustomer(string id, [FromBody] Customer customer)
         {
@@ -113,7 +90,20 @@ namespace HotelManagement.Controllers
                 data = response.Data
             });
         }
+        [HttpPut("{maTaiKhoan}")]
+        public async Task<IActionResult> UpdateCustomerName(int maTaiKhoan, [FromBody] UpdateCustomerNameRequest request)
+        {
+            var response = await _customerRepository.UpdateCustomerNameAsync(maTaiKhoan, request.HoTenKhachHang);
+            if (!response.Success)
+                return StatusCode(400, new { success = false, message = response.Message, data = (bool?)null });
 
+            return StatusCode(200, new
+            {
+                success = response.Success,
+                message = response.Message,
+                data = response.Data
+            });
+        }
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(string id)
         {

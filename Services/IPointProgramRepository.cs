@@ -30,11 +30,14 @@ namespace HotelManagement.Services
         {
             try
             {
+                Console.WriteLine($"TyLeTichDiem value: {pointProgram.TyLeTichDiem}");
+
                 var parameters = new
                 {
                     pointProgram.TenCT,
                     pointProgram.DiemToiThieu,
-                    pointProgram.MucGiamGia
+                    pointProgram.MucGiamGia,
+                    pointProgram.TyLeTichDiem
                 };
 
                 var maCT = await _db.QueryFirstOrDefaultStoredProcedureAsync<int>("sp_PointProgram_Create", parameters);

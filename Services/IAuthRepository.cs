@@ -101,10 +101,9 @@ namespace HotelManagement.Services
 
                 Console.WriteLine($"Lưu RefreshToken cho MaTaiKhoan: {user.MaTaiKhoan}");
 
-                // Kiểm tra SP có tồn tại không
                 try
                 {
-                    await _db.ExecuteStoredProcedureAsync("sp_UserToken_Create", new
+                    var result = await _db.ExecuteStoredProcedureAsync("sp_UserToken_Create", new
                     {
                         MaTaiKhoan = user.MaTaiKhoan,
                         AccessToken = accessToken,
@@ -116,23 +115,34 @@ namespace HotelManagement.Services
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Lỗi khi lưu RefreshToken: {ex.Message}");
-                    // Lưu trực tiếp vào bảng nếu SP gây lỗi
-                    await _db.ExecuteAsync(@"
-                INSERT INTO UserToken (MaTaiKhoan, AccessToken, RefreshToken, NgayHetHan) 
-                VALUES (@MaTaiKhoan, @AccessToken, @RefreshToken, @NgayHetHan)",
-                        new
-                        {
-                            MaTaiKhoan = user.MaTaiKhoan,
-                            AccessToken = accessToken,
-                            RefreshToken = refreshToken,
-                            NgayHetHan = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays)
-                        });
+                    // Kiểm tra xem token đã được lưu chưa trước khi chèn lại
+                    var tokenExists = await _db.QueryFirstOrDefaultAsync<int>(
+                        "SELECT COUNT(1) FROM UserToken WHERE MaTaiKhoan = @MaTaiKhoan AND AccessToken = @AccessToken",
+                        new { MaTaiKhoan = user.MaTaiKhoan, AccessToken = accessToken });
+
+                    if (tokenExists == 0)
+                    {
+                        await _db.ExecuteAsync(@"
+            INSERT INTO UserToken (MaTaiKhoan, AccessToken, RefreshToken, NgayHetHan) 
+            VALUES (@MaTaiKhoan, @AccessToken, @RefreshToken, @NgayHetHan)",
+                            new
+                            {
+                                MaTaiKhoan = user.MaTaiKhoan,
+                                AccessToken = accessToken,
+                                RefreshToken = refreshToken,
+                                NgayHetHan = DateTime.UtcNow.AddDays(_refreshTokenExpiryDays)
+                            });
+                        Console.WriteLine("Lưu RefreshToken trực tiếp thành công");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Token đã được lưu bởi stored procedure, bỏ qua chèn trực tiếp");
+                    }
                 }
 
                 user.AccessToken = accessToken;
                 user.RefreshToken = refreshToken;
                 user.ExpiresIn = expiresIn;
-
                 Console.WriteLine($"Đăng nhập thành công: MaTaiKhoan = {user.MaTaiKhoan}");
                 return ApiResponse<TokenResponse>.SuccessResponse(user, "Đăng nhập thành công");
             }

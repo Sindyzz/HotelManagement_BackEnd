@@ -18,4 +18,8 @@
         public string DienThoai { get; set; }
         public string MaCT { get; set; } // Mã Chương Trình (Point Program)
     }
+    public class UpdateCustomerNameRequest
+    {
+        public string HoTenKhachHang { get; set; }
+    }
 }

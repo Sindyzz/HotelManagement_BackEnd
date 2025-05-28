@@ -9,8 +9,8 @@ namespace HotelManagement.Services
         Task<(ApiResponse<IEnumerable<Customer>> Items, int TotalCount)> GetAllAsync(
             int pageNumber, int pageSize, string? searchTerm = null, string? sortBy = "MaKhachHang", string? sortOrder = "ASC");
         Task<ApiResponse<Customer>> GetByIdAsync(string id);
-        Task<ApiResponse<string>> CreateAsync(AddCustomer customer);
         Task<ApiResponse<bool>> UpdateAsync(Customer customer);
+        Task<ApiResponse<bool>> UpdateCustomerNameAsync(int maTaiKhoan, string hoTenKhachHang);
         Task<ApiResponse<bool>> DeleteAsync(string id);
         Task<ApiResponse<bool>> IsEmailExistsAsync(string email);
         Task<ApiResponse<bool>> IsPhoneExistsAsync(string phone);
@@ -71,27 +71,6 @@ namespace HotelManagement.Services
             }
         }
 
-        public async Task<ApiResponse<string>> CreateAsync(AddCustomer addCustomer)
-        {
-            try
-            {
-                var parameters = new
-                {
-                    addCustomer.HoTenKhachHang,
-                    addCustomer.Email,
-                    addCustomer.DienThoai,
-                    addCustomer.MaCT
-                };
-
-                var newId = await _db.QueryFirstOrDefaultStoredProcedureAsync<string>("sp_Customer_Insert", parameters);
-                return ApiResponse<string>.SuccessResponse(newId, "Tạo khách hàng thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResponse<string>.ErrorResponse($"Lỗi khi tạo khách hàng: {ex.Message}");
-            }
-        }
-
         public async Task<ApiResponse<bool>> UpdateAsync(Customer customer)
         {
             try
@@ -116,7 +95,42 @@ namespace HotelManagement.Services
                 return ApiResponse<bool>.ErrorResponse($"Lỗi khi cập nhật khách hàng: {ex.Message}");
             }
         }
+        public async Task<ApiResponse<bool>> UpdateCustomerNameAsync(int maTaiKhoan, string hoTenKhachHang)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(hoTenKhachHang))
+                {
+                    Console.WriteLine("Họ tên khách hàng không hợp lệ");
+                    return ApiResponse<bool>.ErrorResponse("Họ tên khách hàng không hợp lệ");
+                }
 
+                var parameters = new
+                {
+                    MaTaiKhoan = maTaiKhoan,
+                    HoTenKhachHang = hoTenKhachHang
+                };
+
+                Console.WriteLine($"Cập nhật họ tên khách hàng cho MaTaiKhoan: {maTaiKhoan}");
+                var rowsAffected = await _db.ExecuteAsync(
+                    "UPDATE Customer SET HoTenKhachHang = @HoTenKhachHang WHERE MaTaiKhoan = @MaTaiKhoan",
+                    parameters);
+
+                if (rowsAffected <= 0)
+                {
+                    Console.WriteLine("Cập nhật họ tên thất bại: Không tìm thấy khách hàng");
+                    return ApiResponse<bool>.ErrorResponse("Không tìm thấy khách hàng");
+                }
+
+                Console.WriteLine("Cập nhật họ tên thành công");
+                return ApiResponse<bool>.SuccessResponse(true, "Cập nhật họ tên thành công");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Lỗi khi cập nhật họ tên: {ex.Message}");
+                return ApiResponse<bool>.ErrorResponse($"Lỗi khi cập nhật họ tên: {ex.Message}");
+            }
+        }
         public async Task<ApiResponse<bool>> DeleteAsync(string id)
         {
             try
